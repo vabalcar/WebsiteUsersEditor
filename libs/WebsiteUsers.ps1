@@ -226,41 +226,6 @@ function New-WebsiteUser {
     }
 }
 
-function Restore-WebsiteUser {
-    Param (
-        [Parameter(Mandatory=$true)] [string] $Group,
-        [Parameter(ValueFromPipeline=$true)] [string] $Name,
-        [switch] $DryRun
-    )
-
-    begin {
-        $usersFixed = 0
-        if (!$DryRun) {
-            $locationBase = Join-Path $config.websitesLocation $Group
-            $homeDirBase = Join-Path $config.apacheServerDocumentRoot $locationBase
-        }
-    }
-
-    process {
-        "Fixing user $Name in group $Group..." | Out-Host
-        if ($DryRun) { return }
-        
-        $homeDir = Join-Path $homeDirBase $Name
-        New-Item -Force -ItemType Directory -Path $homeDir/.tmp
-        & chown -R "$($config.serverUser):$($config.serverGoup)" $homeDir
-        
-        Get-ApacheUserConfig -Name $Name -HomeDir $homeDir -LocationBase $locationBase | Out-File -Path (Join-Path $config.apacheUsersSettings "$Name.conf")
-        ++$usersFixed
-    }
-    
-    end {
-        # Restart Apache iff it's necessary.
-        if ($usersFixed -gt 0) {
-            & /etc/init.d/apache2 restart
-        }
-    }
-}
-
 <#
 .SYNOPSIS
 Removes a website user on the server.
