@@ -1,0 +1,10 @@
+{
+    "domain": "example.com",
+    "serverUser": "server",
+    "serverGroup": "server",
+    "apacheServerDocumentRoot": "/home/server/public_html",
+    "websitesLocation": "websites",
+    "apacheUsersSettings": "/etc/apache2/users-settings",
+    "defaultUserPassword": "1234",
+    "backupDir": "/home/server/backups"
+}
