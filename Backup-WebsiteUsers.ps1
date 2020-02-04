@@ -15,7 +15,7 @@ List of website users to backup in a user per line format
 
 .EXAMPLE
 Command
-./Remove-WebsiteUsers.ps1 < usersLists/group-2020.txt
+./Backup-WebsiteUsers.ps1 < usersLists/group-2020.txt
 backups users from the "usersLists/group-2020.txt" file by the "Settings.json" configuration file.
 #>
 
