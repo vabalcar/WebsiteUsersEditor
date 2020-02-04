@@ -6,4 +6,4 @@ Param (
 
 . (Join-Path 'libs' 'WebsiteUsers.ps1') -ConfigurationFile $ConfigurationFile
 
-$input | Test-WebsiteUser | Fix-WebsiteUser -GroupName $GroupName
+$input | Test-WebsiteUser | Restore-WebsiteUser -GroupName $GroupName

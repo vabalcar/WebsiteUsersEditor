@@ -57,7 +57,7 @@ function Get-GroupName {
     }
 }
 
-function Create-WebsiteUser {
+function New-WebsiteUser {
     Param (
         [Parameter(Mandatory=$true)] [string] $GroupName,
         [Parameter(ValueFromPipeline=$true)] [string] $Name
@@ -105,7 +105,7 @@ Redirect "/$Name" "https://$($config.domain)/$locationBase/$Name"
     }
 }
 
-function Fix-WebsiteUser {
+function Restore-WebsiteUser {
     Param (
         [Parameter(Mandatory=$true)] [string] $GroupName,
         [Parameter(ValueFromPipeline=$true)] [string] $Name
