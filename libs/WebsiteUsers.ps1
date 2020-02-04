@@ -154,7 +154,7 @@ Redirect "/$Name" "https://$($config.domain)/$LocationBase/$Name"
 Creates a website user on the server.
 
 .PARAMETER Group
-The group in which the user has to be created
+A group in which the user has to be created
 
 .PARAMETER Name
 The name of the user
