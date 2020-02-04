@@ -78,34 +78,43 @@ Redirect "/$Name" "https://$($config.domain)/$LocationBase/$Name"
 function New-WebsiteUser {
     Param (
         [Parameter(Mandatory=$true)] [string] $GroupName,
-        [Parameter(ValueFromPipeline=$true)] [string] $Name
+        [Parameter(ValueFromPipeline=$true)] [string] $Name,
+        [switch] $DryRun
     )
     
     begin {
         $usersCreated = 0
-        $locationBase = Join-Path $config.websitesLocation $GroupName
-        $homeDirBase = Join-Path $config.apacheServerDocumentRoot $locationBase
-		if (!(Test-Path -PathType Container -Path $homeDirBase)) {
-            New-Item -ItemType 'Directory' -Path $homeDirBase | Out-Null
-			& chown -R "$($config.serverUser):$($config.serverGoup)" $homeDirBase
+        if (!$DryRun) {
+            $locationBase = Join-Path $config.websitesLocation $GroupName
+            $homeDirBase = Join-Path $config.apacheServerDocumentRoot $locationBase
+            if (!(Test-Path -PathType Container -Path $homeDirBase)) {
+                New-Item -ItemType 'Directory' -Path $homeDirBase | Out-Null
+                & chown -R "$($config.serverUser):$($config.serverGoup)" $homeDirBase
+            }
         }
     }
 
     process {
         "Creating user $Name in group $GroupName..." | Out-Host
+        if ($DryRun) { return }
+        
         $homeDir = Join-Path $homeDirBase $Name
-        $apacheUserConfig = Get-ApacheUserConfig -Name $Name -HomeDir $homeDir -LocationBase $locationBase
         if (!(Test-Path -PathType Container -Path $homeDir)) {
             New-Item -ItemType 'Directory' -Path $homeDir | Out-Null
         }
         if (!(Test-Path -PathType Container -Path "$homeDir/.tmp")) {
             New-Item -Force -ItemType Directory -Path "$homeDir/.tmp" | Out-Null
         }
-        $apacheUserConfig | Out-File -Path (Join-Path $config.apacheUsersSettings "$Name.conf")
+        
         $dbname = Get-DBName -Name $Name
         & virtualmin create-database --domain $config.domain --name $dbName --type mysql
+        
         & virtualmin create-user --domain $config.domain --user $Name --pass $config.defaultUserPassword --ftp --noemail --mysql $dbName --web --home (Join-Path 'public_html' $locationBase $Name)
+
+        Get-ApacheUserConfig -Name $Name -HomeDir $homeDir -LocationBase $locationBase | Out-File -Path (Join-Path $config.apacheUsersSettings "$Name.conf")
+        
         & chown -R "$($config.serverUser):$($config.serverGoup)" $homeDir
+        
         ++$usersCreated
     }
     
@@ -119,23 +128,27 @@ function New-WebsiteUser {
 function Restore-WebsiteUser {
     Param (
         [Parameter(Mandatory=$true)] [string] $GroupName,
-        [Parameter(ValueFromPipeline=$true)] [string] $Name
+        [Parameter(ValueFromPipeline=$true)] [string] $Name,
+        [switch] $DryRun
     )
 
     begin {
         $usersFixed = 0
-        $locationBase = Join-Path $config.websitesLocation $GroupName
-        $homeDirBase = Join-Path $config.apacheServerDocumentRoot $locationBase
+        if (!$DryRun) {
+            $locationBase = Join-Path $config.websitesLocation $GroupName
+            $homeDirBase = Join-Path $config.apacheServerDocumentRoot $locationBase
+        }
     }
 
     process {
         "Fixing user $Name in group $GroupName..." | Out-Host
+        if ($DryRun) { return }
+        
         $homeDir = Join-Path $homeDirBase $Name
-        $apacheUserConfig = Get-ApacheUserConfig -Name $Name -HomeDir $homeDir -LocationBase $locationBase
-
         New-Item -Force -ItemType Directory -Path $homeDir/.tmp
         & chown -R "$($config.serverUser):$($config.serverGoup)" $homeDir
-        $apacheUserConfig | Out-File -Path (Join-Path $config.apacheUsersSettings "$Name.conf")
+        
+        Get-ApacheUserConfig -Name $Name -HomeDir $homeDir -LocationBase $locationBase | Out-File -Path (Join-Path $config.apacheUsersSettings "$Name.conf")
         ++$usersFixed
     }
     
@@ -148,7 +161,8 @@ function Restore-WebsiteUser {
 
 function Remove-WebsiteUser {
     Param (
-        [Parameter(ValueFromPipeline=$true)] [string] $Name
+        [Parameter(ValueFromPipeline=$true)] [string] $Name,
+        [switch] $DryRun
     )
     
     begin {
@@ -158,18 +172,25 @@ function Remove-WebsiteUser {
     process {
 		$groupName = Get-GroupName -Name $Name
         "Removing user $_ from group $groupName..." | Out-Host
+        if ($DryRun) { return }
+
+        & virtualmin delete-user --domain $config.domain --user $Name
+
+        $dbname = Get-DBName -Name $Name
+        & virtualmin delete-database --domain $config.domain --name $dbName --type mysql
+
+        Remove-Item -Force -Path (Join-Path $config.apacheUsersSettings "$Name.conf")
+
         $homeDirBase = Join-Path $config.apacheServerDocumentRoot $config.websitesLocation $groupName
         $homeDir = Join-Path $homeDirBase $Name
-        $dbname = Get-DBName -Name $Name
-        & virtualmin delete-user --domain $config.domain --user $Name
-        & virtualmin delete-database --domain $config.domain --name $dbName --type mysql
-        Remove-Item -Force -Path (Join-Path $config.apacheUsersSettings "$Name.conf")
         if (Test-Path -PathType Container -Path $homeDir) {
             Remove-Item -Recurse -Force -Path $homeDir
         }
+
         if ((!(Test-Path -Path (Join-Path $homeDirBase '*'))) -and (Test-Path -Path $homeDirBase)) {
             Remove-Item -Recurse -Force -Path $homeDirBase
         }
+
         ++$usersRemoved
     }
     
@@ -182,24 +203,30 @@ function Remove-WebsiteUser {
 
 function Backup-WebsiteUser {
     Param (
-        [Parameter(ValueFromPipeline=$true)] [string] $Name
+        [Parameter(ValueFromPipeline=$true)] [string] $Name,
+        [switch] $DryRun
     )
     
     process {
         $groupName = Get-GroupName -Name $Name
-		"Backing up data of user $Name from group $groupName..." | Out-Host
+        "Backing up data of user $Name from group $groupName..." | Out-Host
+        if ($DryRun) { return }
+
         $locationBase = Join-Path $config.websitesLocation $groupName
-        $homeDirBase = Join-Path $config.apacheServerDocumentRoot $locationBase
-        $homeDir = Join-Path $homeDirBase $Name
         $backupDir = Join-Path $config.backupDir $locationBase
-        $dbname = Get-DBName -Name $Name
         if (!(Test-Path -PathType Container -Path $backupDir)) {
             New-Item -ItemType 'Directory' -Path $backupDir | Out-Null
         }
+
+        $homeDirBase = Join-Path $config.apacheServerDocumentRoot $locationBase
+        $homeDir = Join-Path $homeDirBase $Name
         if (Test-Path -PathType Container -Path $homeDir) {
             & zip -r (Join-Path $backupDir "$Name.zip") (Join-Path $homeDir '*')
         }
+        
+        $dbname = Get-DBName -Name $Name
         & mysqldump --databases $dbName | Out-File -Path (Join-Path $backupDir "$dbName.sql")
+        
         & chown -R "$($config.serverUser):$($config.serverGoup)" $backupDir
     }
 }
