@@ -57,6 +57,24 @@ function Get-GroupName {
     }
 }
 
+function Get-ApacheUserConfig {
+    Param(
+        [Parameter(Mandatory=$true)] [string] $Name,
+        [Parameter(Mandatory=$true)] [string] $HomeDir,
+        [Parameter(Mandatory=$true)] [string] $LocationBase
+    )
+
+    return @"
+<Directory "$HomeDir">
+php_admin_value open_basedir "$HomeDir"
+php_admin_value upload_tmp_dir "$HomeDir/.tmp"
+</Directory>
+
+Redirect "/$Name" "https://$($config.domain)/$LocationBase/$Name"
+"@
+
+}
+
 function New-WebsiteUser {
     Param (
         [Parameter(Mandatory=$true)] [string] $GroupName,
@@ -76,21 +94,14 @@ function New-WebsiteUser {
     process {
         "Creating user $Name in group $GroupName..." | Out-Host
         $homeDir = Join-Path $homeDirBase $Name
-        $apacheUserConfTemplate = @"
-<Directory "$homeDir">
-php_admin_value open_basedir "$homeDir"
-php_admin_value upload_tmp_dir "$homeDir/.tmp"
-</Directory>
-
-Redirect "/$Name" "https://$($config.domain)/$locationBase/$Name"
-"@
+        $apacheUserConfig = Get-ApacheUserConfig -Name $Name -HomeDir $homeDir -LocationBase $locationBase
         if (!(Test-Path -PathType Container -Path $homeDir)) {
             New-Item -ItemType 'Directory' -Path $homeDir | Out-Null
         }
         if (!(Test-Path -PathType Container -Path "$homeDir/.tmp")) {
             New-Item -Force -ItemType Directory -Path "$homeDir/.tmp" | Out-Null
         }
-        $apacheUserConfTemplate | Out-File -Path (Join-Path $config.apacheUsersSettings "$Name.conf")
+        $apacheUserConfig | Out-File -Path (Join-Path $config.apacheUsersSettings "$Name.conf")
         $dbname = Get-DBName -Name $Name
         & virtualmin create-database --domain $config.domain --name $dbName --type mysql
         & virtualmin create-user --domain $config.domain --user $Name --pass $config.defaultUserPassword --ftp --noemail --mysql $dbName --web --home (Join-Path 'public_html' $locationBase $Name)
@@ -120,18 +131,11 @@ function Restore-WebsiteUser {
     process {
         "Fixing user $Name in group $GroupName..." | Out-Host
         $homeDir = Join-Path $homeDirBase $Name
-        $apacheUserConfTemplate = @"
-<Directory "$homeDir">
-php_admin_value open_basedir "$homeDir"
-php_admin_value upload_tmp_dir "$homeDir/.tmp"
-</Directory>
-
-Redirect "/$Name" "https://$($config.domain)/$locationBase/$Name"
-"@
+        $apacheUserConfig = Get-ApacheUserConfig -Name $Name -HomeDir $homeDir -LocationBase $locationBase
 
         New-Item -Force -ItemType Directory -Path $homeDir/.tmp
         & chown -R "$($config.serverUser):$($config.serverGoup)" $homeDir
-        $apacheUserConfTemplate | Out-File -Path (Join-Path $config.apacheUsersSettings "$Name.conf")
+        $apacheUserConfig | Out-File -Path (Join-Path $config.apacheUsersSettings "$Name.conf")
         ++$usersFixed
     }
     
