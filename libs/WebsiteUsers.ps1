@@ -336,11 +336,13 @@ function Backup-WebsiteUser {
             Set-Location $originalLocation
         }
         
-        # Backup the user's database to a SQL script.
-        $dbname = Get-DBName -Name $Name
-        $sqlDumpFile = Join-Path $backupDir "$dbName.sql"
-        "Dumping DB $dbname into $sqlDumpFile..." | Out-Host
-        & mysqldump --databases $dbName | Out-File -Path $sqlDumpFile
+        # Backup the user's database to a SQL script iff it's necessary.
+        $dbName = Get-DBName -Name $Name
+        if (Test-DB -Name $dbName) {
+            $sqlDumpFile = Join-Path $backupDir "$dbName.sql"
+            "Dumping DB $dbName into $sqlDumpFile..." | Out-Host
+            & mysqldump --databases $dbName | Out-File -Path $sqlDumpFile
+        }
         
         # Give ownership of the backup dir to the server user.
         & chown -R "$($config.serverUser):$($config.serverGoup)" $backupDir
