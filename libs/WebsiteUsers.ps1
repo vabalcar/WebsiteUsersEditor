@@ -317,18 +317,21 @@ function Backup-WebsiteUser {
         "Backing up data of user $Name from group $group..." | Out-Host
         if ($DryRun) { return }
 
-        # Create a backup dir iff necessary.
+        # Create a backup dir iff it's necessary.
         $locationBase = Join-Path $config.websitesLocation $group
         $backupDir = Join-Path $config.backupDir $locationBase
         if (!(Test-Path -PathType Container -Path $backupDir)) {
             New-Item -ItemType 'Directory' -Path $backupDir | Out-Null
         }
 
-        # Backup the user's home dir to zip archive in the backup dir iff necessary.
+        # Backup the user's home dir to zip archive in the backup dir iff it's necessary.
         $homeDirBase = Join-Path $config.apacheServerDocumentRoot $locationBase
         $homeDir = Join-Path $homeDirBase $Name
-        if (Test-Path -PathType Container -Path $homeDir) {
-            & zip -r (Join-Path $backupDir "$Name.zip") (Join-Path $homeDir '*')
+        if ((Test-Path -PathType Container -Path $homeDir) -and ((Get-ChildItem -Path $homeDir -Attributes !H | Measure-Object).Count -ne 0)) {
+            $originalLocation = Get-Location
+            Set-Location $homeDirBase
+            & zip -r (Join-Path $backupDir "$Name.zip") (Join-Path $Name '*')
+            Set-Location $originalLocation
         }
         
         # Backup the user's database to a SQL script.
