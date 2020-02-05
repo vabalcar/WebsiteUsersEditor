@@ -329,14 +329,18 @@ function Backup-WebsiteUser {
         $homeDir = Join-Path $homeDirBase $Name
         if ((Test-Path -PathType Container -Path $homeDir) -and ((Get-ChildItem -Path $homeDir -Attributes !H | Measure-Object).Count -ne 0)) {
             $originalLocation = Get-Location
-            Set-Location $homeDirBase
-            & zip -r (Join-Path $backupDir "$Name.zip") (Join-Path $Name '*')
+            Set-Location $homeDir
+            $zipFile = Join-Path $backupDir "$Name.zip"
+            "Backing up $homeDir into $zipFile..." | Out-Host
+            & zip -r $zipFile '*'
             Set-Location $originalLocation
         }
         
         # Backup the user's database to a SQL script.
         $dbname = Get-DBName -Name $Name
-        & mysqldump --databases $dbName | Out-File -Path (Join-Path $backupDir "$dbName.sql")
+        $sqlDumpFile = Join-Path $backupDir "$dbName.sql"
+        "Dumping DB $dbname into $sqlDumpFile..." | Out-Host
+        & mysqldump --databases $dbName | Out-File -Path $sqlDumpFile
         
         # Give ownership of the backup dir to the server user.
         & chown -R "$($config.serverUser):$($config.serverGoup)" $backupDir
