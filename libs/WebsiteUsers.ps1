@@ -206,8 +206,10 @@ function New-WebsiteUser {
         & chown -R "$($config.serverUser):$($config.serverGoup)" $homeDir
         
         # Create a user's database.
-        $dbname = Get-DBName -Name $Name
-        & virtualmin create-database --domain $config.domain --name $dbName --type mysql
+        $dbName = Get-DBName -Name $Name
+        if (Test-DB -Negate -Name $dbName) {
+            & virtualmin create-database --domain $config.domain --name $dbName --type mysql
+        }
         
         # Create the user itself.
         & virtualmin create-user --domain $config.domain --user $Name --pass $config.defaultUserPassword --ftp --noemail --mysql $dbName --web --home (Join-Path 'public_html' $locationBase $Name)
@@ -264,8 +266,10 @@ function Remove-WebsiteUser {
         & virtualmin delete-user --domain $config.domain --user $Name
 
         # Remove the user's database.
-        $dbname = Get-DBName -Name $Name
-        & virtualmin delete-database --domain $config.domain --name $dbName --type mysql
+        $dbName = Get-DBName -Name $Name
+        if (Test-DB -Name $dbName) {
+            & virtualmin delete-database --domain $config.domain --name $dbName --type mysql
+        }
 
         # Remove the user's home dir.
         $homeDirBase = Join-Path $config.apacheServerDocumentRoot $config.websitesLocation $group
