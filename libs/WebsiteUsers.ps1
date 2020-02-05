@@ -54,8 +54,8 @@ filter Test-DB {
         [Parameter(ValueFromPipeline=$true)] [string] $Name
     )
     
-    $db = & mysqlshow | ForEach-Object { $_.Split(' ')[1] } | Select-Object -Skip 2 | Select-String -Pattern "^$Name$"
-    if (($db -eq $Name) -xor $Negate) {
+    $dbExists = (& mysqlshow | ForEach-Object { $_.Split(' ')[1] } | Select-Object -Skip 2 | Select-String -Pattern "^$Name$").Matches.Count -gt 0
+    if ($dbExists -xor $Negate) {
         $Name
     } elseif ($Negate) {
         "DB $Name already exists!" | Out-Host
@@ -332,7 +332,7 @@ function Backup-WebsiteUser {
             Set-Location $homeDir
             $zipFile = Join-Path $backupDir "$Name.zip"
             "Backing up $homeDir into $zipFile..." | Out-Host
-            & zip -r $zipFile '*'
+            & zip -r $zipFile (Join-Path '.' '*')
             Set-Location $originalLocation
         }
         
