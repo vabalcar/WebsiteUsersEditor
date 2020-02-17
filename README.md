@@ -2,19 +2,24 @@
 WebsiteUsersEditor is a simple CLI written in PowerShell Core for batch managing website users in Virtualmin.
 
 ## Requirements
-WebsiteUsersEditor is theoretically **multiplatform** thanks to the multiplatformity of **PowerShell Core** which it runs in.
+WebsiteUsersEditor is theoretically **multiplatform** thanks to the multiplatformity of **PowerShell Core** which it runs in. 
+However, **zip**, **mysqldump**, **mysqlshow** and **chown** utilities are required to be installed in the target environment.
 Properly configured **Virtualmin** with a virtual server running AMP (**Apache**, **MySQL**, and **PHP**) is also required.
+If you intend to use Windows, WSL is highly recommended.
 
-To sum it up, here's the list of everything you need to install and configure:
+To sum it up, here's the list of everything you need to have installed and configured:
 - [Powershell Core](https://github.com/PowerShell/PowerShell)
 - [Virtualmin](https://www.virtualmin.com)
+- [chown](https://linux.die.net/man/1/chown)
+- [mysqldump](https://dev.mysql.com/doc/refman/5.7/en/mysqldump.html)
+- [mysqlshow](https://dev.mysql.com/doc/refman/5.7/en/mysqlshow.html)
+- [zip](https://linux.die.net/man/1/zip)
 
 ## Installation
 Run following commands to install WebsiteUsersEditor from this repository:
 ```
 git clone https://github.com/vabalcar/WebsiteUsersEditor.git WebsiteUsersEditor
 cd WebsiteUsersEditor
-chmod +x *.ps1
 cp DefaultSettings.json Settings.json # and edit Settings.json to configure WebsiteUsersEditor
 ```
 
@@ -83,8 +88,8 @@ Create-WebsiteUsers.ps1 creates for each given user following:
 ```
 backups users from the `usersLists/sample-group.txt` file by the `Settings.json` configuration file.
 
-Backup-WebsiteUsers.ps1 backups to the newly created zip file in **backupDir** for each given user following:
-- the user's home directory
+Backup-WebsiteUsers.ps1 backups in **backupDir** for each given user following:
+- the user's home directory to a zip file
 - the user's database as a SQL script
 
 ### Remove users
