@@ -101,4 +101,4 @@ removes users from the `usersLists/sample-group.txt` file by the `Settings.json`
 Remove-WebsiteUsers.ps1 removes everything that Create-WebsiteUsers.ps1 creates.
 
 ## License
-The content of this repository is licensed under the [MIT License](LICENSE).
+The content of this repository is licensed under the [MIT License](https://github.com/vabalcar/WebsiteUsersEditor/blob/master/LICENSE.txt).
